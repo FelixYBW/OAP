@@ -119,7 +119,16 @@ public final class ArrowWritableColumnVector extends WritableColumnVector {
 
   public static ArrowWritableColumnVector[] loadColumns(int capacity, Schema arrowSchema,
                                                         ArrowRecordBatch recordBatch) {
-    VectorSchemaRoot root = VectorSchemaRoot.create(arrowSchema, allocator); 
+    return loadColumns(capacity, arrowSchema, recordBatch, null);
+  }
+
+  public static ArrowWritableColumnVector[] loadColumns(int capacity, Schema arrowSchema,
+                                                        ArrowRecordBatch recordBatch, 
+                                                        BufferAllocator _allocator) {
+    if (_allocator == null) {
+      _allocator = allocator;
+    }
+    VectorSchemaRoot root = VectorSchemaRoot.create(arrowSchema, _allocator); 
     VectorLoader loader = new VectorLoader(root);
     loader.load(recordBatch);
     return loadColumns(capacity, root.getFieldVectors());
@@ -494,6 +503,11 @@ public final class ArrowWritableColumnVector extends WritableColumnVector {
 
   public void appendString(byte[] value, int srcIndex, int count) {
     writer.setBytes(elementsAppended, count, value, srcIndex);
+    elementsAppended++;
+  }
+
+  public void appendDecimal(BigDecimal value) {
+    writer.setBytes(elementsAppended, value);
     elementsAppended++;
   }
 
@@ -1315,6 +1329,10 @@ public final class ArrowWritableColumnVector extends WritableColumnVector {
     void appendBytes(byte[] value, int offset, int length) {
       throw new UnsupportedOperationException();
     }
+
+    void setBytes(int rowId, BigDecimal value) {
+      throw new UnsupportedOperationException();
+    }
   }
 
   private static class BooleanWriter extends ArrowVectorWriter {
@@ -1663,10 +1681,10 @@ public final class ArrowWritableColumnVector extends WritableColumnVector {
       BigDecimal v = new BigDecimal(value);
       writer.setSafe(rowId, v.setScale(writer.getScale()));
     }
+
     @Override
-    final void setArray(int rowId, int offset, int length) {
-      ArrowBuf buffer = allocator.buffer(16 * rowId + 16L);
-      writer.setSafe(rowId, offset, buffer);
+    final void setBytes(int rowId, BigDecimal value) {
+      writer.setSafe(rowId, value);
     }
   }
 
