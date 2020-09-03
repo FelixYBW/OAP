@@ -89,7 +89,7 @@ class ColumnarDataSourceRDD(
             val beforeScan = System.nanoTime()
             valuePrepared = reader.next()
             numInputBatches += 1
-            scanTime += (System.nanoTime() - beforeScan) / (1000 * 1000)
+            scanTime += (System.nanoTime() - beforeScan)
           } catch {
             case e =>
               val errmsg = e.getStackTrace.mkString("\n")

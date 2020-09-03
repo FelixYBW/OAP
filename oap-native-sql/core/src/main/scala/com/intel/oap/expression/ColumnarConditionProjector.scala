@@ -235,7 +235,7 @@ class ColumnarConditionProjector(
                 columnarBatch.column(i).asInstanceOf[ArrowWritableColumnVector].getValueVector()
               })
               afterEval = System.nanoTime()
-              proc_time += ((System.nanoTime() - beforeEval) / (1000 * 1000))
+              proc_time += ((System.nanoTime() - beforeEval))
               input = ConverterUtils.createArrowRecordBatch(numRows, cols)
               conditioner.evaluate(input, selectionVector)
               ConverterUtils.releaseArrowRecordBatch(input)
