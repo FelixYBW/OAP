@@ -60,7 +60,10 @@ case class CoalesceBatchesExec(child: SparkPlan) extends UnaryExecNode {
     val avgCoalescedNumRows = longMetric("avgCoalescedNumRows")
 
     child.executeColumnar().mapPartitions { iter =>
-      if (iter.hasNext) {
+      val beforeCollect = System.nanoTime
+      val hasNext = iter.hasNext
+      collectTime += System.nanoTime - beforeCollect
+      if (hasNext) {
         new Iterator[ColumnarBatch] {
           var target: ColumnarBatch = _
           var numBatchesTotal: Long = _
@@ -81,7 +84,10 @@ case class CoalesceBatchesExec(child: SparkPlan) extends UnaryExecNode {
           }
 
           override def hasNext: Boolean = {
-            iter.hasNext
+            val beforeCollect = System.nanoTime
+            val hasNext = iter.hasNext
+            collectTime += System.nanoTime - beforeCollect
+            hasNext
           }
 
           override def next(): ColumnarBatch = {
@@ -91,16 +97,15 @@ case class CoalesceBatchesExec(child: SparkPlan) extends UnaryExecNode {
 
             val beforeTarget = System.nanoTime
             target = iter.next()
-            collectTime += beforeTarget - System.nanoTime
+            collectTime += System.nanoTime - beforeTarget
 
             target.retain()
             rowCount += target.numRows
 
-            while (iter.hasNext && rowCount < recordsPerBatch) {
+            while (hasNext && rowCount < recordsPerBatch) {
               val beforeDelta = System.nanoTime
               val delta = iter.next()
-              collectTime += beforeDelta - System.nanoTime
-
+              collectTime += System.nanoTime - beforeDelta
               delta.retain()
               rowCount += delta.numRows
               batchesToAppend += delta
